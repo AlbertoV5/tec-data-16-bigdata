@@ -1,0 +1,547 @@
+#+title: AWS ServicesS
+#+subtitle: Storage and data with AWS
+#+author: Alberto Valdez
+#+SETUPFILE: ../config/org-theme-alt.config
+#+SETUPFILE: ../config/org-header.config
+#+PROPERTY: header-args:sql :engine postgresql :dbhost (getenv "AWS_DATAVIZ") :dbuser postgres :database dataviz :results value table
+
+
+* PostgreSQL Database
+
+** Setup
+
+We are storing the host string in an environment variable and using the .pgpass file in the home directory to fetch the password automatically.
+
+#+begin_src elisp :results value
+(getenv "AWS_DATAVIZ")
+#+end_src
+
+** Create Schema
+
+We create our tables with this schema.
+
+#+begin_src sql :tangle medical.sql
+CREATE TABLE doctors (
+ id INT PRIMARY KEY NOT NULL,
+ specialty TEXT,
+ taking_patients BOOLEAN
+);
+CREATE TABLE patients (
+ id INT NOT NULL,
+ doctor_id INT NOT NULL,
+ health_status TEXT,
+ PRIMARY KEY (id, doctor_id),
+ FOREIGN KEY (doctor_id) REFERENCES doctors (id)
+);
+
+INSERT INTO doctors(id, specialty, taking_patients)
+VALUES
+(1, 'cardiology', TRUE),
+(2, 'orthopedics', FALSE),
+(3, 'pediatrics', TRUE);
+INSERT INTO patients (id, doctor_id, health_status)
+VALUES
+(1, 2, 'healthy'),
+(2, 3, 'sick'),
+(3, 2, 'sick'),
+(4, 1, 'healthy'),
+(5, 1, 'sick');
+#+end_src
+
+#+RESULTS[23249be349190546ff620484274c824268f9d7cb]:
+#+begin_example
+CREATE TABLE
+CREATE TABLE
+INSERT 0 3
+INSERT 0 5
+#+end_example
+
+** Read Data
+
+Then we make sure there is data available.
+
+#+begin_src sql
+SELECT * FROM doctors;
+SELECT * FROM patients;
+#+end_src
+
+#+RESULTS[a38303e357eaf2431064c2e67885cfa1b8341143]:
+#+begin_example
+| id |   specialty | taking_patients |
+|----+-------------+-----------------|
+|  1 |  cardiology | t               |
+|  2 | orthopedics | f               |
+|  3 |  pediatrics | t               |
+| id |   doctor_id | health_status   |
+|  1 |           2 | healthy         |
+|  2 |           3 | sick            |
+|  3 |           2 | sick            |
+|  4 |           1 | healthy         |
+|  5 |           1 | sick            |
+#+end_example
+
+** Update Fields
+
+#+begin_src sql
+UPDATE doctors
+SET taking_patients = FALSE
+WHERE id = 1;
+UPDATE patients
+SET health_status = 'healthy'
+WHERE id = 1;
+#+end_src
+
+#+RESULTS[884f48b8a999c9f5ad3064c6a8978355bc8a7937]:
+#+begin_example
+| UPDATE 1 |
+|----------|
+| UPDATE 1 |
+#+end_example
+
+** Delete data
+
+#+begin_src sql
+DELETE FROM patients
+WHERE id = 1;
+#+end_src
+
+#+RESULTS[e64d60f2db94d4121c1470e7e7256f644d49a930]:
+#+begin_example
+| DELETE 1 |
+|----------|
+#+end_example
+
+** Confirm CRUD
+
+#+begin_src sql
+SELECT * FROM doctors;
+SELECT * FROM patients;
+#+end_src
+
+#+RESULTS[a38303e357eaf2431064c2e67885cfa1b8341143]:
+#+begin_example
+| id | specialty   | taking_patients |
+|----+-------------+-----------------|
+|  2 | orthopedics | f               |
+|  3 | pediatrics  | t               |
+|  1 | cardiology  | f               |
+| id | doctor_id   | health_status   |
+|  2 | 3           | sick            |
+|  3 | 2           | sick            |
+|  4 | 1           | healthy         |
+|  5 | 1           | sick            |
+#+end_example
+
+
+* Simple Storage Service
+
+** Creating new Database
+
+#+begin_src sql
+CREATE DATABASE my_data_class_db;
+#+end_src
+
+#+RESULTS[a95874233109e547e9713a73ef188dd20db61d06]:
+#+begin_example
+| CREATE DATABASE |
+|-----------------|
+#+end_example
+
+#+begin_src sql
+\l
+#+end_src
+
+#+RESULTS[68684b84f6ccb0facafc1b03da70e66d94f49191]:
+#+begin_example
+| List of databases     |          |          |             |             |                       |
+|-----------------------+----------+----------+-------------+-------------+-----------------------|
+| Name                  | Owner    | Encoding | Collate     | Ctype       | Access privileges     |
+| dataviz               | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 |                       |
+| my_data_class_db      | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 |                       |
+| postgres              | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 |                       |
+| rdsadmin              | rdsadmin | UTF8     | en_US.UTF-8 | en_US.UTF-8 | rdsadmin=CTc/rdsadmin |
+| rdstopmgr=Tc/rdsadmin |          |          |             |             |                       |
+| template0             | rdsadmin | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/rdsadmin           |
+| rdsadmin=CTc/rdsadmin |          |          |             |             |                       |
+| template1             | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres           |
+| postgres=CTc/postgres |          |          |             |             |                       |
+#+end_example
+
+#+begin_src sql :database my_data_class_db
+-- Create Active User Table
+CREATE TABLE active_user (
+ id INT PRIMARY KEY NOT NULL,
+ first_name TEXT,
+ last_name TEXT,
+ username TEXT
+);
+
+CREATE TABLE billing_info (
+ billing_id INT PRIMARY KEY NOT NULL,
+ street_address TEXT,
+ state TEXT,
+ username TEXT
+);
+
+CREATE TABLE payment_info (
+ billing_id INT PRIMARY KEY NOT NULL,
+ cc_encrypted TEXT
+);
+#+end_src
+
+#+RESULTS[bd41b905d419a498682490deb24fa66c5366e9a8]:
+#+begin_example
+| CREATE TABLE |
+|--------------|
+| CREATE TABLE |
+| CREATE TABLE |
+#+end_example
+
+
+
+
+** Google Collab
+
+#+begin_src python :eval no
+import os
+# Find the latest version of spark 3.0  from http://www.apache.org/dist/spark/ and enter as the spark version
+# For example:
+# spark_version = 'spark-3.0.3'
+spark_version = 'spark-3.3.0'
+os.environ['SPARK_VERSION']=spark_version
+
+# Install Spark and Java
+!apt-get update
+!apt-get install openjdk-11-jdk-headless -qq > /dev/null
+!wget -q http://www.apache.org/dist/spark/$SPARK_VERSION/$SPARK_VERSION-bin-hadoop3.tgz
+!tar xf $SPARK_VERSION-bin-hadoop3.tgz
+!pip install -q findspark
+
+# Set Environment Variables
+os.environ["JAVA_HOME"] = "/usr/lib/jvm/java-11-openjdk-amd64"
+os.environ["SPARK_HOME"] = f"/content/{spark_version}-bin-hadoop3"
+
+# Start a SparkSession
+import findspark
+findspark.init()
+#+end_src
+
+PostgreSQL drivers.
+
+#+begin_src python
+!wget https://jdbc.postgresql.org/download/postgresql-42.2.16.jar
+#+end_src
+
+Mac OS.
+
+#+begin_src shell :eval no
+curl https://jdbc.postgresql.org/download/postgresql-42.2.16.jar --output ./content/postgresql-42.2.16.jar
+#+end_src
+
+** Pyspark
+
+#+begin_src python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("CloudETL").config("spark.driver.extraClassPath","/content/postgresql-42.2.16.jar").getOrCreate()
+#+end_src
+
+#+RESULTS[d2ec6ccf738747eaa4f1f21cf96e841553f7c420]:
+#+begin_example
+22/10/20 17:13:19 WARN Utils: Your hostname, Albertos-MacBook-Pro.local resolves to a loopback address: 127.0.0.1; using 192.168.100.70 instead (on interface en0)
+22/10/20 17:13:19 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+22/10/20 17:13:20 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+#+end_example
+
+** Extract with Pyspark
+
+#+begin_src python
+from pyspark import SparkFiles
+
+user_data_url = "https://avq-dataviz.s3.amazonaws.com/user_data.csv"
+
+spark.sparkContext.addFile(user_data_url)
+user_data_df = spark.read.csv(SparkFiles.get("user_data.csv"), sep=",", header=True, inferSchema=True)
+user_data_df.show(5)
+#+end_src
+
+#+RESULTS[b7603c5f141a3707cb485ad8acf1ad11694d3135]:
+#+begin_example
+[Stage 0:>                                       (0 + 1) / 1]                                                             +---+----------+---------+-----------+-------------------+--------------+---------+
+| id|first_name|last_name|active_user|     street_address|         state| username|
++---+----------+---------+-----------+-------------------+--------------+---------+
+|  1|    Cletus|  Lithcow|      false|78309 Riverside Way|      Virginia|ibearham0|
+|  2|       Caz|   Felgat|      false|83 Hazelcrest Place|       Alabama| wwaller1|
+|  3|     Kerri|  Crowson|      false|     112 Eliot Pass|North Carolina|ichesnut2|
+|  4|   Freddie|    Caghy|      false|    15 Merchant Way|      New York|  tsnarr3|
+|  5|   Sadella|    Deuss|      false|   079 Acker Avenue|     Tennessee|fwherrit4|
++---+----------+---------+-----------+-------------------+--------------+---------+
+only showing top 5 rows
+#+end_example
+
+
+#+begin_src python
+user_payment_url = "https://avq-dataviz.s3.amazonaws.com/user_payment.csv"
+spark.sparkContext.addFile(user_payment_url)
+user_payment_df = spark.read.csv(SparkFiles.get("user_payment.csv"), sep=",", header=True, inferSchema=True)
+user_payment_df.show(5)
+#+end_src
+
+#+RESULTS[cb378033841ea5e4adbc0eadbf799683395ee53d]:
+#+begin_example
++----------+---------+--------------------+
+|billing_id| username|        cc_encrypted|
++----------+---------+--------------------+
+|         1|ibearham0|a799fcafe47d7fb19...|
+|         2| wwaller1|a799fcafe47d7fb19...|
+|         3|ichesnut2|a799fcafe47d7fb19...|
+|         4|  tsnarr3|a799fcafe47d7fb19...|
+|         5|fwherrit4|a799fcafe47d7fb19...|
++----------+---------+--------------------+
+only showing top 5 rows
+#+end_example
+
+** Transform
+
+#+begin_src python
+joined_df = user_data_df.join(user_payment_df, on="username", how="inner")
+joined_df.show(5)
+#+end_src
+
+#+RESULTS[f53e4bdd91cbfad3523dca457f37ead12eae97b9]:
+#+begin_example
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+| username| id|first_name|last_name|active_user|     street_address|         state|billing_id|        cc_encrypted|
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+|ibearham0|  1|    Cletus|  Lithcow|      false|78309 Riverside Way|      Virginia|         1|a799fcafe47d7fb19...|
+| wwaller1|  2|       Caz|   Felgat|      false|83 Hazelcrest Place|       Alabama|         2|a799fcafe47d7fb19...|
+|ichesnut2|  3|     Kerri|  Crowson|      false|     112 Eliot Pass|North Carolina|         3|a799fcafe47d7fb19...|
+|  tsnarr3|  4|   Freddie|    Caghy|      false|    15 Merchant Way|      New York|         4|a799fcafe47d7fb19...|
+|fwherrit4|  5|   Sadella|    Deuss|      false|   079 Acker Avenue|     Tennessee|         5|a799fcafe47d7fb19...|
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+only showing top 5 rows
+#+end_example
+
+Drop null values.
+
+#+begin_src python
+dropna_df = joined_df.dropna()
+dropna_df.show(5)
+#+end_src
+
+#+RESULTS[e4478e1c65096a782a4ef61e6906434e40e3075e]:
+#+begin_example
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+| username| id|first_name|last_name|active_user|     street_address|         state|billing_id|        cc_encrypted|
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+|ibearham0|  1|    Cletus|  Lithcow|      false|78309 Riverside Way|      Virginia|         1|a799fcafe47d7fb19...|
+| wwaller1|  2|       Caz|   Felgat|      false|83 Hazelcrest Place|       Alabama|         2|a799fcafe47d7fb19...|
+|ichesnut2|  3|     Kerri|  Crowson|      false|     112 Eliot Pass|North Carolina|         3|a799fcafe47d7fb19...|
+|  tsnarr3|  4|   Freddie|    Caghy|      false|    15 Merchant Way|      New York|         4|a799fcafe47d7fb19...|
+|fwherrit4|  5|   Sadella|    Deuss|      false|   079 Acker Avenue|     Tennessee|         5|a799fcafe47d7fb19...|
++---------+---+----------+---------+-----------+-------------------+--------------+----------+--------------------+
+only showing top 5 rows
+#+end_example
+
+Filter data, find active users.
+
+#+begin_src python
+from pyspark.sql.functions import col
+
+cleaned_df = dropna_df.filter(col("active_user") == True)
+cleaned_df.show(5)
+#+end_src
+
+#+RESULTS[eb3564c5a51141495a579e1b2b8ffdb0fe8842bd]:
+#+begin_example
++------------+---+----------+---------+-----------+--------------------+--------------------+----------+--------------------+
+|    username| id|first_name|last_name|active_user|      street_address|               state|billing_id|        cc_encrypted|
++------------+---+----------+---------+-----------+--------------------+--------------------+----------+--------------------+
+|  fstappard5|  6|    Fraser|  Korneev|       true|  76084 Novick Court|           Minnesota|         6|a799fcafe47d7fb19...|
+|  lhambling6|  7|    Demott|   Rapson|       true|    86320 Dahle Park|District of Columbia|         7|a799fcafe47d7fb19...|
+|   wheinerte| 15|   Sadella|    Jaram|       true|7528 Waxwing Terrace|         Connecticut|        15|a799fcafe47d7fb19...|
+|droughsedgeg| 17|    Hewitt|  Trammel|       true|    2455 Corry Alley|      North Carolina|        17|a799fcafe47d7fb19...|
+|   ydudeniei| 19|       Ted|  Knowlys|       true|      31 South Drive|                Ohio|        19|a799fcafe47d7fb19...|
++------------+---+----------+---------+-----------+--------------------+--------------------+----------+--------------------+
+only showing top 5 rows
+#+end_example
+
+
+** Match Database Schema
+
+#+begin_src python
+clean_user_df = cleaned_df.select(
+    ["id", "first_name", "last_name", "username"]
+)
+clean_user_df.show(5)
+#+end_src
+
+#+RESULTS[983d70e2d06b37a05313a9ffb41b62e4c297ad25]:
+#+begin_example
++---+----------+---------+------------+
+| id|first_name|last_name|    username|
++---+----------+---------+------------+
+|  6|    Fraser|  Korneev|  fstappard5|
+|  7|    Demott|   Rapson|  lhambling6|
+| 15|   Sadella|    Jaram|   wheinerte|
+| 17|    Hewitt|  Trammel|droughsedgeg|
+| 19|       Ted|  Knowlys|   ydudeniei|
++---+----------+---------+------------+
+only showing top 5 rows
+#+end_example
+
+#+begin_src python
+clean_billing_df = cleaned_df.select(
+    ["billing_id", "street_address", "state", "username"]
+)
+clean_billing_df.show(5)
+#+end_src
+
+#+RESULTS[7dec10efb1fc3d4fbd6abbb76db128ca5f89c548]:
+#+begin_example
++----------+--------------------+--------------------+------------+
+|billing_id|      street_address|               state|    username|
++----------+--------------------+--------------------+------------+
+|         6|  76084 Novick Court|           Minnesota|  fstappard5|
+|         7|    86320 Dahle Park|District of Columbia|  lhambling6|
+|        15|7528 Waxwing Terrace|         Connecticut|   wheinerte|
+|        17|    2455 Corry Alley|      North Carolina|droughsedgeg|
+|        19|      31 South Drive|                Ohio|   ydudeniei|
++----------+--------------------+--------------------+------------+
+only showing top 5 rows
+#+end_example
+
+
+#+begin_src python
+clean_payment_df = cleaned_df.select(
+    ["billing_id", "cc_encrypted"]
+)
+clean_payment_df.show(5)
+#+end_src
+
+#+RESULTS[9b5ba3c6ffcd51e1c8f2c48d5fed65d14fcf76d3]:
+#+begin_example
++----------+--------------------+
+|billing_id|        cc_encrypted|
++----------+--------------------+
+|         6|a799fcafe47d7fb19...|
+|         7|a799fcafe47d7fb19...|
+|        15|a799fcafe47d7fb19...|
+|        17|a799fcafe47d7fb19...|
+|        19|a799fcafe47d7fb19...|
++----------+--------------------+
+only showing top 5 rows
+#+end_example
+
+** Connect to Database
+
+Google collab version.
+
+#+begin_src python :eval no
+# Store environmental variable
+from getpass import getpass
+password = getpass('Enter database password')
+# Configure settings for RDS
+mode = "append"
+jdbc_url="jdbc:postgresql://<connection string>:5432/<database-name>"
+config = {"user":"postgres",
+          "password": password,
+          "driver":"org.postgresql.Driver"}
+#+end_src
+
+Local emacs version. Using .pgpass file and environment variable, it should map the host and database to the correct password.
+
+#+begin_src python
+from getpass import getpass
+import os
+
+conn = os.environ["AWS_DATAVIZ"]
+
+mode = "append"
+jdbc_url = f"jdbc:postgresql://{conn}:5432/my_data_class_db"
+
+config = {
+    "user":"postgres",
+    "driver":"org.postgresql.Driver"
+}
+print(jdbc_url)
+#+end_src
+
+#+RESULTS[86ac8c07a68a8e84557808bdfb0a6ad54afa7092]:
+#+begin_example
+jdbc:postgresql://dataviz.cvj7xeynbmtt.us-east-1.rds.amazonaws.com:5432/my_data_class_db
+#+end_example
+
+** Load into Database
+
+Load each dataframe into the corresponding table.
+
+#+begin_src python :eval no
+clean_user_df.write.jdbc(
+    url=jdbc_url,
+    table='active_user',
+    mode=mode,
+    properties=config
+)
+clean_billing_df.write.jdbc(
+    url=jdbc_url,
+    table='billing_info',
+    mode=mode,
+    properties=config
+)
+clean_payment_df.write.jdbc(
+    url=jdbc_url,
+    table='payment_info',
+    mode=mode,
+    properties=config
+)
+#+end_src
+
+** Confirm Upload
+
+#+begin_src sql :database my_data_class_db
+SELECT * FROM active_user LIMIT 5;
+#+end_src
+
+#+RESULTS[15da8e0625cf48ee0e6af2f17e6d4e6320853d6c]:
+#+begin_example
+| id | first_name | last_name | username     |
+|----+------------+-----------+--------------|
+|  6 | Fraser     | Korneev   | fstappard5   |
+|  7 | Demott     | Rapson    | lhambling6   |
+| 15 | Sadella    | Jaram     | wheinerte    |
+| 17 | Hewitt     | Trammel   | droughsedgeg |
+| 19 | Ted        | Knowlys   | ydudeniei    |
+#+end_example
+
+#+begin_src sql :database my_data_class_db
+SELECT * FROM billing_info LIMIT 5;
+#+end_src
+
+#+RESULTS[405b6568a4a9b0a79173a407b6529a2a37b3b28e]:
+#+begin_example
+| billing_id | street_address       | state                | username     |
+|------------+----------------------+----------------------+--------------|
+|          6 | 76084 Novick Court   | Minnesota            | fstappard5   |
+|          7 | 86320 Dahle Park     | District of Columbia | lhambling6   |
+|         15 | 7528 Waxwing Terrace | Connecticut          | wheinerte    |
+|         17 | 2455 Corry Alley     | North Carolina       | droughsedgeg |
+|         19 | 31 South Drive       | Ohio                 | ydudeniei    |
+#+end_example
+
+#+begin_src sql :database my_data_class_db
+SELECT * FROM payment_info LIMIT 5;
+#+end_src
+
+#+RESULTS[0c100a0693033b6a0c3ac554026d273bce61c796]:
+#+begin_example
+| billing_id | cc_encrypted                             |
+|------------+------------------------------------------|
+|          6 | a799fcafe47d7fb19bfb02cd83855fdfc34b9f87 |
+|          7 | a799fcafe47d7fb19bfb02cd83855fdfc34b9f87 |
+|         15 | a799fcafe47d7fb19bfb02cd83855fdfc34b9f87 |
+|         17 | a799fcafe47d7fb19bfb02cd83855fdfc34b9f87 |
+|         19 | a799fcafe47d7fb19bfb02cd83855fdfc34b9f87 |
+#+end_example

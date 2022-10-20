@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2022-10-20 Thu 14:30 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NLP Pipeline</title>
+<meta name="author" content="Alberto Valdez" />
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="https://albertovaldez5.gitlab.io/org-template/resources/theme/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="https://albertovaldez5.gitlab.io/org-template/resources/theme/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://albertovaldez5.gitlab.io/org-template/resources/theme/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="https://albertovaldez5.gitlab.io/org-template/resources/theme/js/readtheorg.js"></script>
+<link rel="shortcut icon" href="https://albertovaldez5.gitlab.io/org-template/resources/theme/favicon.ico">
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="../index.html"> HOME </a>
+</div><div id="content" class="content">
+<h1 class="title">NLP Pipeline
+<br />
+<span class="subtitle">Natural Language Processing</span>
+</h1>
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org315bba4">1. NLP Pipeline</a>
+<ul>
+<li><a href="#org051747b">1.1. Google Collab</a></li>
+<li><a href="#org9fc3658">1.2. Spark</a></li>
+<li><a href="#org9a2711d">1.3. User-defined Functions</a></li>
+<li><a href="#orga148a19">1.4. Stop Words</a></li>
+<li><a href="#orgf852446">1.5. Term Frequency-Inverse</a></li>
+<li><a href="#org403d24f">1.6. TF-IDF Python</a></li>
+</ul>
+</li>
+<li><a href="#org7ef39f9">2. Pipeline</a>
+<ul>
+<li><a href="#org0181891">2.1. Load Pyspark</a></li>
+<li><a href="#orgf052429">2.2. Load data from the web.</a></li>
+<li><a href="#orgb7b8951">2.3. Import Functions and Features</a></li>
+<li><a href="#orgb9be0e7">2.4. Get text length</a></li>
+<li><a href="#orga271288">2.5. Create Transformations</a></li>
+<li><a href="#org06d426d">2.6. Creating the Feature Vector</a></li>
+<li><a href="#org26b67fa">2.7. Creating the Pipeline</a></li>
+<li><a href="#orga6d1d09">2.8. Run the Pipeline</a></li>
+<li><a href="#org7943a29">2.9. Train the Model</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org315bba4" class="outline-2">
+<h2 id="org315bba4"><span class="section-number-2">1.</span> NLP Pipeline</h2>
+<div class="outline-text-2" id="text-1">
+</div>
+<div id="outline-container-org051747b" class="outline-3">
+<h3 id="org051747b"><span class="section-number-3">1.1.</span> Google Collab</h3>
+<div class="outline-text-3" id="text-1-1">
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> os</span>
+<span style="color: #579C4C;"># Find the latest version of spark 3.0  from http://www.apache.org/dist/spark/ and enter as the spark version</span>
+<span style="color: #579C4C;"># For example:</span>
+<span style="color: #579C4C;"># spark_version = 'spark-3.0.3'</span>
+<span style="color: #9CDCFE;">spark_version</span> <span style="color: #e0e0e0;">=</span> <span style="color: #CE9178;">'spark-3.3.0'</span>
+os.<span style="color: #9CDCFE;">environ</span>[<span style="color: #9CDCFE;">'SPARK_VERSION'</span>]<span style="color: #e0e0e0;">=</span>spark_version
+
+<span style="color: #579C4C;"># Install Spark and Java</span>
+!apt<span style="color: #e0e0e0;">-</span>get update
+!apt<span style="color: #e0e0e0;">-</span>get install openjdk<span style="color: #e0e0e0;">-</span><span style="color: #BBCCAA;">11</span><span style="color: #e0e0e0;">-</span>jdk<span style="color: #e0e0e0;">-</span>headless <span style="color: #e0e0e0;">-</span>qq <span style="color: #e0e0e0;">&gt;</span> <span style="color: #e0e0e0;">/</span>dev<span style="color: #e0e0e0;">/</span>null
+!wget <span style="color: #e0e0e0;">-</span>q <span style="color: #9CDCFE;">http</span>:<span style="color: #e0e0e0;">//</span>www.<span style="color: #9CDCFE;">apache</span>.<span style="color: #9CDCFE;">org</span><span style="color: #e0e0e0;">/</span>dist<span style="color: #e0e0e0;">/</span>spark<span style="color: #e0e0e0;">/</span>$<span style="color: #e0e0e0;">SPARK_VERSION</span><span style="color: #e0e0e0;">/</span>$<span style="color: #e0e0e0;">SPARK_VERSION</span><span style="color: #e0e0e0;">-</span>bin<span style="color: #e0e0e0;">-</span>hadoop3.<span style="color: #9CDCFE;">tgz</span>
+!tar xf $<span style="color: #e0e0e0;">SPARK_VERSION</span><span style="color: #e0e0e0;">-</span>bin<span style="color: #e0e0e0;">-</span>hadoop3.<span style="color: #9CDCFE;">tgz</span>
+!pip install <span style="color: #e0e0e0;">-</span>q findspark
+
+<span style="color: #579C4C;"># Set Environment Variables</span>
+os.<span style="color: #9CDCFE;">environ</span>[<span style="color: #9CDCFE;">"JAVA_HOME"</span>] <span style="color: #e0e0e0;">=</span> <span style="color: #CE9178;">"/usr/lib/jvm/java-11-openjdk-amd64"</span>
+os.<span style="color: #9CDCFE;">environ</span>[<span style="color: #9CDCFE;">"SPARK_HOME"</span>] <span style="color: #e0e0e0;">=</span> <span style="color: #CE9178;">f"/content/</span><span style="color: #569CD6; background-color: #252525;">{</span><span style="color: #9CDCFE; background-color: #252525;">spark_version</span><span style="color: #569CD6; background-color: #252525;">}</span><span style="color: #CE9178;">-bin-hadoop3"</span>
+
+<span style="color: #579C4C;"># Start a SparkSession</span>
+<span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> findspark</span>
+findspark.<span style="color: #ded492;">init</span>()
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org9fc3658" class="outline-3">
+<h3 id="org9fc3658"><span class="section-number-3">1.2.</span> Spark</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Start Spark session.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> pyspark</span>
+<span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkSession</span>
+<span style="color: #9CDCFE;">spark</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">SparkSession</span>.<span style="color: #9CDCFE;">builder</span>.<span style="color: #ded492;">appName</span>(<span style="color: #CE9178;">"Tokens"</span>).<span style="color: #ded492;">getOrCreate</span>()
+</pre>
+</div>
+
+<p>
+Import and use Tokenizer.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.feature </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">Tokenizer</span>
+<span style="color: #9CDCFE;">tokenizer</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">Tokenizer</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"sentence"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"words"</span>)
+<span style="color: #C586C0;">print</span>(tokenizer)
+</pre>
+</div>
+
+<pre class="example" id="org894ab4f">
+Tokenizer_1604cacf6fb2
+</pre>
+
+<p>
+Let&rsquo;s say we have the following dataframe.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">df</span> <span style="color: #e0e0e0;">=</span> spark.<span style="color: #ded492;">createDataFrame</span>(
+    <span style="color: #9CDCFE;">data</span><span style="color: #e0e0e0;">=</span>[
+        (<span style="color: #BBCCAA;">1</span>, <span style="color: #CE9178;">"Spark is great"</span>),
+        (<span style="color: #BBCCAA;">2</span>, <span style="color: #CE9178;">"We are learning Spark"</span>),
+        (<span style="color: #BBCCAA;">3</span>, <span style="color: #CE9178;">"Spark is better than hadoop"</span>)
+    ],
+    <span style="color: #9CDCFE;">schema</span><span style="color: #e0e0e0;">=</span>[<span style="color: #CE9178;">"id"</span>, <span style="color: #CE9178;">"sentence"</span>]
+)
+df.<span style="color: #ded492;">show</span>(<span style="color: #BBCCAA;">5</span>)
+</pre>
+</div>
+
+<pre class="example" id="org3dca3ce">
++---+--------------------+
+| id|            sentence|
++---+--------------------+
+|  1|      Spark is great|
+|  2|We are learning S...|
+|  3|Spark is better t...|
++---+--------------------+
+</pre>
+
+<p>
+The tokenizer uses a transform method that takes a DataFrame as input.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">tokenized_df</span> <span style="color: #e0e0e0;">=</span> tokenizer.<span style="color: #ded492;">transform</span>(df)
+tokenized_df.<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="orgf1310f6">
++---+---------------------------+---------------------------------+
+|id |sentence                   |words                            |
++---+---------------------------+---------------------------------+
+|1  |Spark is great             |[spark, is, great]               |
+|2  |We are learning Spark      |[we, are, learning, spark]       |
+|3  |Spark is better than hadoop|[spark, is, better, than, hadoop]|
++---+---------------------------+---------------------------------+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org9a2711d" class="outline-3">
+<h3 id="org9a2711d"><span class="section-number-3">1.3.</span> User-defined Functions</h3>
+<div class="outline-text-3" id="text-1-3">
+<p>
+User-defined functions (UDFs) are functions created by the user to add custom output columns.
+</p>
+
+<p>
+Create a function to return the length of a list.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">def</span> <span style="color: #ded492;">word_list_length</span>(<span style="color: #9CDCFE;">word_list</span>):
+    <span style="color: #569CD6;">return</span> <span style="color: #C586C0;">len</span>(word_list)
+</pre>
+</div>
+
+<pre class="example" id="orgd7d98cc">
+
+</pre>
+
+<p>
+Next, we&rsquo;ll import the udf function, the col function to select a column to be passed into a function.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql.functions </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> col, udf</span>
+<span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql.types </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">IntegerType</span>
+
+<span style="color: #9CDCFE;">count_tokens</span> <span style="color: #e0e0e0;">=</span> <span style="color: #ded492;">udf</span>(word_list_length, <span style="color: #4EC9B0;">IntegerType</span>())
+</pre>
+</div>
+
+<pre class="example" id="orga1913cf">
+
+</pre>
+
+<p>
+The udf will take in the name of the function as a parameter and the output data type, which is the IntegerType that we just imported.
+</p>
+
+<p>
+We repeat the process now. This time we include the function we previously created to get more information about the token result.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">tokenizer</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">Tokenizer</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"sentence"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"words"</span>)
+<span style="color: #9CDCFE;">tokenized_df</span> <span style="color: #e0e0e0;">=</span> tokenizer.<span style="color: #ded492;">transform</span>(df)
+tokenized_df.<span style="color: #ded492;">withColumn</span>(<span style="color: #CE9178;">"tokens"</span>, <span style="color: #ded492;">count_tokens</span>(<span style="color: #ded492;">col</span>(<span style="color: #CE9178;">"words"</span>))).<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="org1c16a4a">
++---+---------------------------+---------------------------------+------+
+|id |sentence                   |words                            |tokens|
++---+---------------------------+---------------------------------+------+
+|1  |Spark is great             |[spark, is, great]               |3     |
+|2  |We are learning Spark      |[we, are, learning, spark]       |4     |
+|3  |Spark is better than hadoop|[spark, is, better, than, hadoop]|5     |
++---+---------------------------+---------------------------------+------+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orga148a19" class="outline-3">
+<h3 id="orga148a19"><span class="section-number-3">1.4.</span> Stop Words</h3>
+<div class="outline-text-3" id="text-1-4">
+<p>
+Stop words are words with little to no linguistic value in NLP. Removing them from the data can improve accuracy of the language model. Examples are: &ldquo;a&rdquo;, &ldquo;the&rdquo;, &ldquo;and&rdquo;.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkSession</span>
+<span style="color: #9CDCFE;">spark</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">SparkSession</span>.<span style="color: #9CDCFE;">builder</span>.<span style="color: #ded492;">appName</span>(<span style="color: #CE9178;">"StopWords"</span>).<span style="color: #ded492;">getOrCreate</span>()
+</pre>
+</div>
+
+<pre class="example" id="orgdadc212">
+22/10/20 13:38:42 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+</pre>
+
+<p>
+We make a df.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">df</span> <span style="color: #e0e0e0;">=</span> spark.<span style="color: #ded492;">createDataFrame</span>([
+    (<span style="color: #BBCCAA;">0</span>, [<span style="color: #CE9178;">"Big"</span>, <span style="color: #CE9178;">"data"</span>, <span style="color: #CE9178;">"is"</span>, <span style="color: #CE9178;">"super"</span>, <span style="color: #CE9178;">"fun"</span>]),
+    (<span style="color: #BBCCAA;">1</span>, [<span style="color: #CE9178;">"This"</span>, <span style="color: #CE9178;">"is"</span>, <span style="color: #CE9178;">"going"</span>, <span style="color: #CE9178;">"to"</span>, <span style="color: #CE9178;">"be"</span>, <span style="color: #CE9178;">"epic"</span>])
+], [<span style="color: #CE9178;">"id"</span>, <span style="color: #CE9178;">"raw"</span>])
+df.<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="orgeba6eef">
++---+-------------------------------+
+|id |raw                            |
++---+-------------------------------+
+|0  |[Big, data, is, super, fun]    |
+|1  |[This, is, going, to, be, epic]|
++---+-------------------------------+
+</pre>
+
+<p>
+Now we import and run the word remover.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.feature </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">StopWordsRemover</span>
+
+<span style="color: #9CDCFE;">remover</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">StopWordsRemover</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"raw"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"filtered"</span>)
+<span style="color: #4EC9B0;">remover</span>.<span style="color: #ded492;">transform</span>(df).<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="orgb1cc4f1">
++---+-------------------------------+-----------------------+
+|id |raw                            |filtered               |
++---+-------------------------------+-----------------------+
+|0  |[Big, data, is, super, fun]    |[Big, data, super, fun]|
+|1  |[This, is, going, to, be, epic]|[going, epic]          |
++---+-------------------------------+-----------------------+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgf852446" class="outline-3">
+<h3 id="orgf852446"><span class="section-number-3">1.5.</span> Term Frequency-Inverse</h3>
+<div class="outline-text-3" id="text-1-5">
+<p>
+Term Frequency-Inverse Document Frequency Weight (TF-IDF) is a statistical weight showing the importance of a word in a document. TF measures the frequency of a word occurring in a document. IDF measures the significance of a word across a set of documents. Multiplyng the two fives us the TF-IDF.
+</p>
+
+<p>
+Example.
+</p>
+
+<p>
+If &ldquo;Python&rdquo; appears 20 times in a 1,000-word article, the TF weight would be 20 divided by 1,000 which equals 0.02. Assume that this article resides in a database with other articles, totaling 1,000,000 articles.
+</p>
+
+<p>
+DF takes the number of documents that contain the word Python and compares to the total number of documents, then takes the logarithm of the results. If Python is mentioned in 1000 articles and the total amount of articles in the database is 1,000,000, the IDF would be the log of the total number of articles divided by the number of articles that contain the word Python.
+</p>
+
+<blockquote>
+<p>
+IDF = log(total articles / articles that contain the word Python)
+IDF = log(1,000,000 / 1000) = 3
+</p>
+</blockquote>
+
+<p>
+Now that we have both numbers, we can determine the TF-IDF which is the multiple of the two.
+</p>
+
+<blockquote>
+<p>
+TF * IDF = 0.2 * 3 = .6
+</p>
+</blockquote>
+
+<p>
+There are two ways to convert text to numeric data.
+</p>
+
+<ul class="org-ul">
+<li>A <code>CountVectorizer</code> indexes the words accross all documents and returns a vector of word counts correponding to the indeces. They are assigned in descending order of frequency. For example, the word with the highest frequency across all documents will be given an index of 0, and the word with the lowest frequency will have an index equal to the number of words in the text.</li>
+
+<li>A <code>HashingTF</code> converts words to numeric IDs, where the same words are assigned to the same ID and counted then a vector is returned.</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org403d24f" class="outline-3">
+<h3 id="org403d24f"><span class="section-number-3">1.6.</span> TF-IDF Python</h3>
+<div class="outline-text-3" id="text-1-6">
+<p>
+We are going to import the previous Tokenizer classes plus the HashingTF.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkSession</span>
+<span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.feature </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">HashingTF</span><span style="color: #4EC9B0;">, </span><span style="color: #e0e0e0;">IDF</span><span style="color: #4EC9B0;">, </span><span style="color: #4EC9B0;">Tokenizer</span><span style="color: #4EC9B0;">, </span><span style="color: #4EC9B0;">StopWordsRemover</span>
+
+<span style="color: #9CDCFE;">spark</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">SparkSession</span>.<span style="color: #9CDCFE;">builder</span>.<span style="color: #ded492;">appName</span>(<span style="color: #CE9178;">"TF-IDF"</span>).<span style="color: #ded492;">getOrCreate</span>()
+</pre>
+</div>
+
+<pre class="example" id="org651b349">
+22/10/20 14:00:10 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+</pre>
+
+<p>
+Then we will load data from the web.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkFiles</span>
+<span style="color: #9CDCFE;">url</span> <span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-online/module_16/airlines.csv"</span>
+spark.<span style="color: #9CDCFE;">sparkContext</span>.<span style="color: #ded492;">addFile</span>(url)
+<span style="color: #9CDCFE;">df</span> <span style="color: #e0e0e0;">=</span> spark.<span style="color: #9CDCFE;">read</span>.<span style="color: #ded492;">csv</span>(<span style="color: #4EC9B0;">SparkFiles</span>.<span style="color: #ded492;">get</span>(<span style="color: #CE9178;">"airlines.csv"</span>), <span style="color: #9CDCFE;">sep</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">","</span>, <span style="color: #9CDCFE;">header</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">True</span>)
+
+df.<span style="color: #ded492;">show</span>()
+</pre>
+</div>
+
+<pre class="example" id="org2cce69c">
++--------------------+
+|      Airline Tweets|
++--------------------+
+|@VirginAmerica pl...|
+|@VirginAmerica se...|
+|@VirginAmerica do...|
+|@VirginAmerica Ar...|
+|@VirginAmerica aw...|
++--------------------+
+</pre>
+
+<p>
+We tokenize the dataframe.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">tokened</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">Tokenizer</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"Airline Tweets"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"words"</span>)
+<span style="color: #9CDCFE;">tokened_transformed</span> <span style="color: #e0e0e0;">=</span> tokened.<span style="color: #ded492;">transform</span>(df)
+tokened_transformed.<span style="color: #ded492;">show</span>()
+</pre>
+</div>
+
+<pre class="example" id="org4153f5e">
++--------------------+--------------------+
+|      Airline Tweets|               words|
++--------------------+--------------------+
+|@VirginAmerica pl...|[@virginamerica, ...|
+|@VirginAmerica se...|[@virginamerica, ...|
+|@VirginAmerica do...|[@virginamerica, ...|
+|@VirginAmerica Ar...|[@virginamerica, ...|
+|@VirginAmerica aw...|[@virginamerica, ...|
++--------------------+--------------------+
+</pre>
+
+<p>
+Then we remove stop-words.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">remover</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">StopWordsRemover</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"words"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"filtered"</span>)
+<span style="color: #9CDCFE;">removed_frame</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">remover</span>.<span style="color: #ded492;">transform</span>(tokened_transformed)
+<span style="color: #4EC9B0;">removed_frame</span>.<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="orga830bad">
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+
+|Airline Tweets                                                                                                                         |words                                                                                                                                                          |filtered                                                                                       |
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+
+|@VirginAmerica plus you've added commercials to the experience... tacky.                                                               |[@virginamerica, plus, you've, added, commercials, to, the, experience..., tacky.]                                                                             |[@virginamerica, plus, added, commercials, experience..., tacky.]                              |
+|@VirginAmerica seriously would pay $30 a flight for seats that didn't have this playing. it's really the only bad thing about flying VA|[@virginamerica, seriously, would, pay, $30, a, flight, for, seats, that, didn't, have, this, playing., it's, really, the, only, bad, thing, about, flying, va]|[@virginamerica, seriously, pay, $30, flight, seats, playing., really, bad, thing, flying, va] |
+|@VirginAmerica do you miss me? Don't worry we'll be together very soon.                                                                |[@virginamerica, do, you, miss, me?, don't, worry, we'll, be, together, very, soon.]                                                                           |[@virginamerica, miss, me?, worry, together, soon.]                                            |
+|@VirginAmerica Are the hours of operation for the Club at SFO that are posted online current?                                          |[@virginamerica, are, the, hours, of, operation, for, the, club, at, sfo, that, are, posted, online, current?]                                                 |[@virginamerica, hours, operation, club, sfo, posted, online, current?]                        |
+|@VirginAmerica awaiting my return phone call, just would prefer to use your online self-service option :(                              |[@virginamerica, awaiting, my, return, phone, call,, just, would, prefer, to, use, your, online, self-service, option, :(]                                     |[@virginamerica, awaiting, return, phone, call,, prefer, use, online, self-service, option, :(]|
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+
+</pre>
+
+<p>
+Now we can use the HashingTF function. It takes input and output column plus a parameter to specify the buckets for the split words. This number must be higher than the number of unique words.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">hashing</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">HashingTF</span>(
+    <span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"filtered"</span>,
+    <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"hashedValues"</span>,
+    <span style="color: #9CDCFE;">numFeatures</span><span style="color: #e0e0e0;">=</span><span style="color: #C586C0;">pow</span>(<span style="color: #BBCCAA;">2</span>, <span style="color: #BBCCAA;">18</span>),
+)
+<span style="color: #9CDCFE;">hashed_df</span> <span style="color: #e0e0e0;">=</span> hashing.<span style="color: #ded492;">transform</span>(removed_frame)
+hashed_df.<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="orga856dfa">
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+|Airline Tweets                                                                                                                         |words                                                                                                                                                          |filtered                                                                                       |hashedValues                                                                                                                               |
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+|@VirginAmerica plus you've added commercials to the experience... tacky.                                                               |[@virginamerica, plus, you've, added, commercials, to, the, experience..., tacky.]                                                                             |[@virginamerica, plus, added, commercials, experience..., tacky.]                              |(262144,[1419,99916,168274,171322,186669,256498],[1.0,1.0,1.0,1.0,1.0,1.0])                                                                |
+|@VirginAmerica seriously would pay $30 a flight for seats that didn't have this playing. it's really the only bad thing about flying VA|[@virginamerica, seriously, would, pay, $30, a, flight, for, seats, that, didn't, have, this, playing., it's, really, the, only, bad, thing, about, flying, va]|[@virginamerica, seriously, pay, $30, flight, seats, playing., really, bad, thing, flying, va] |(262144,[30053,44911,70065,94512,99549,145380,166947,171322,178915,229264,237593,239713],[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])|
+|@VirginAmerica do you miss me? Don't worry we'll be together very soon.                                                                |[@virginamerica, do, you, miss, me?, don't, worry, we'll, be, together, very, soon.]                                                                           |[@virginamerica, miss, me?, worry, together, soon.]                                            |(262144,[107065,117975,147224,171322,200547,232735],[1.0,1.0,1.0,1.0,1.0,1.0])                                                             |
+|@VirginAmerica Are the hours of operation for the Club at SFO that are posted online current?                                          |[@virginamerica, are, the, hours, of, operation, for, the, club, at, sfo, that, are, posted, online, current?]                                                 |[@virginamerica, hours, operation, club, sfo, posted, online, current?]                        |(262144,[9641,50671,83962,96266,171322,181964,192171,220194],[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])                                            |
+|@VirginAmerica awaiting my return phone call, just would prefer to use your online self-service option :(                              |[@virginamerica, awaiting, my, return, phone, call,, just, would, prefer, to, use, your, online, self-service, option, :(]                                     |[@virginamerica, awaiting, return, phone, call,, prefer, use, online, self-service, option, :(]|(262144,[6122,50509,50671,67607,98717,121947,128077,171322,225517,234877,261675],[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])            |
++---------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+</pre>
+
+<p>
+The hashedValues will contain the index and term frequency of the corresponding index for each word.
+</p>
+
+<p>
+Now we can plug the data into an IDFModel. It will scale the values while down-weighting based on document frequency.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">idf</span> <span style="color: #e0e0e0;">=</span> <span style="color: #e0e0e0;">IDF</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"hashedValues"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"features"</span>)
+<span style="color: #9CDCFE;">idfModel</span> <span style="color: #e0e0e0;">=</span> idf.<span style="color: #ded492;">fit</span>(hashed_df)
+<span style="color: #9CDCFE;">rescaledData</span> <span style="color: #e0e0e0;">=</span> idfModel.<span style="color: #ded492;">transform</span>(hashed_df)
+<span style="color: #4EC9B0;">rescaledData</span>.<span style="color: #ded492;">select</span>(<span style="color: #CE9178;">"words"</span>, <span style="color: #CE9178;">"features"</span>).<span style="color: #ded492;">show</span>(<span style="color: #9CDCFE;">truncate</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">False</span>)
+</pre>
+</div>
+
+<pre class="example" id="org56bd355">
+22/10/20 14:07:53 WARN DAGScheduler: Broadcasting large task binary with size 4.0 MiB
++---------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|words                                                                                                                                                          |features                                                                                                                                                                                                                                                                                                        |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|[@virginamerica, plus, you've, added, commercials, to, the, experience..., tacky.]                                                                             |(262144,[1419,99916,168274,171322,186669,256498],[1.0986122886681098,1.0986122886681098,1.0986122886681098,0.0,1.0986122886681098,1.0986122886681098])                                                                                                                                                          |
+|[@virginamerica, seriously, would, pay, $30, a, flight, for, seats, that, didn't, have, this, playing., it's, really, the, only, bad, thing, about, flying, va]|(262144,[30053,44911,70065,94512,99549,145380,166947,171322,178915,229264,237593,239713],[1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098,0.0,1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098])|
+|[@virginamerica, do, you, miss, me?, don't, worry, we'll, be, together, very, soon.]                                                                           |(262144,[107065,117975,147224,171322,200547,232735],[1.0986122886681098,1.0986122886681098,1.0986122886681098,0.0,1.0986122886681098,1.0986122886681098])                                                                                                                                                       |
+|[@virginamerica, are, the, hours, of, operation, for, the, club, at, sfo, that, are, posted, online, current?]                                                 |(262144,[9641,50671,83962,96266,171322,181964,192171,220194],[1.0986122886681098,0.6931471805599453,1.0986122886681098,1.0986122886681098,0.0,1.0986122886681098,1.0986122886681098,1.0986122886681098])                                                                                                        |
+|[@virginamerica, awaiting, my, return, phone, call,, just, would, prefer, to, use, your, online, self-service, option, :(]                                     |(262144,[6122,50509,50671,67607,98717,121947,128077,171322,225517,234877,261675],[1.0986122886681098,1.0986122886681098,0.6931471805599453,1.0986122886681098,1.0986122886681098,1.0986122886681098,1.0986122886681098,0.0,1.0986122886681098,1.0986122886681098,1.0986122886681098])                           |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+</pre>
+
+<p>
+The result of the TF-IDF will be the floating point numbers in the features column.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org7ef39f9" class="outline-2">
+<h2 id="org7ef39f9"><span class="section-number-2">2.</span> Pipeline</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-org0181891" class="outline-3">
+<h3 id="org0181891"><span class="section-number-3">2.1.</span> Load Pyspark</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+We are going to go over the complete NLP pipeline.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkSession</span>
+<span style="color: #9CDCFE;">spark</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">SparkSession</span>.<span style="color: #9CDCFE;">builder</span>.<span style="color: #ded492;">appName</span>(<span style="color: #CE9178;">"Yelp_NLP"</span>).<span style="color: #ded492;">getOrCreate</span>()
+</pre>
+</div>
+
+<pre class="example" id="orgb560b6d">
+22/10/20 14:10:46 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgf052429" class="outline-3">
+<h3 id="orgf052429"><span class="section-number-3">2.2.</span> Load data from the web.</h3>
+<div class="outline-text-3" id="text-2-2">
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">SparkFiles</span>
+<span style="color: #9CDCFE;">url</span> <span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-online/module_16/yelp_reviews.csv"</span>
+spark.<span style="color: #9CDCFE;">sparkContext</span>.<span style="color: #ded492;">addFile</span>(url)
+<span style="color: #9CDCFE;">df</span> <span style="color: #e0e0e0;">=</span> spark.<span style="color: #9CDCFE;">read</span>.<span style="color: #ded492;">csv</span>(<span style="color: #4EC9B0;">SparkFiles</span>.<span style="color: #ded492;">get</span>(<span style="color: #CE9178;">"yelp_reviews.csv"</span>), <span style="color: #9CDCFE;">sep</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">","</span>, <span style="color: #9CDCFE;">header</span><span style="color: #e0e0e0;">=</span><span style="color: #569CD6;">True</span>)
+
+df.<span style="color: #ded492;">show</span>(<span style="color: #BBCCAA;">5</span>)
+</pre>
+</div>
+
+<pre class="example" id="orgd23bf41">
+22/10/20 14:10:54 WARN SparkContext: The path https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-online/module_16/yelp_reviews.csv has been added already. Overwriting of added paths is not supported in the current version.
++--------+--------------------+
+|   class|                text|
++--------+--------------------+
+|positive|Wow... Loved this...|
+|negative|  Crust is not good.|
+|negative|Not tasty and the...|
+|positive|Stopped by during...|
+|positive|The selection on ...|
++--------+--------------------+
+only showing top 5 rows
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgb7b8951" class="outline-3">
+<h3 id="orgb7b8951"><span class="section-number-3">2.3.</span> Import Functions and Features</h3>
+<div class="outline-text-3" id="text-2-3">
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.feature </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">Tokenizer</span><span style="color: #4EC9B0;">, </span><span style="color: #4EC9B0;">StopWordsRemover</span><span style="color: #4EC9B0;">, </span><span style="color: #4EC9B0;">HashingTF</span><span style="color: #4EC9B0;">, </span><span style="color: #e0e0e0;">IDF</span><span style="color: #4EC9B0;">, </span><span style="color: #4EC9B0;">StringIndexer</span>
+</pre>
+</div>
+
+<pre class="example" id="org9853258">
+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgb9be0e7" class="outline-3">
+<h3 id="orgb9be0e7"><span class="section-number-3">2.4.</span> Get text length</h3>
+<div class="outline-text-3" id="text-2-4">
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.sql.functions </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> length</span>
+<span style="color: #9CDCFE;">data_df</span> <span style="color: #e0e0e0;">=</span> df.<span style="color: #ded492;">withColumn</span>(
+    <span style="color: #CE9178;">'length'</span>,
+    <span style="color: #ded492;">length</span>(df[<span style="color: #CE9178;">'text'</span>])
+)
+data_df.<span style="color: #ded492;">show</span>()
+</pre>
+</div>
+
+<pre class="example" id="org242acf3">
++--------+--------------------+------+
+|   class|                text|length|
++--------+--------------------+------+
+|positive|Wow... Loved this...|    24|
+|negative|  Crust is not good.|    18|
+|negative|Not tasty and the...|    41|
+|positive|Stopped by during...|    87|
+|positive|The selection on ...|    59|
+|negative|Now I am getting ...|    46|
+|negative|Honeslty it didn'...|    37|
+|negative|The potatoes were...|   111|
+|positive|The fries were gr...|    25|
+|positive|      A great touch.|    14|
+|positive|Service was very ...|    24|
+|negative|  Would not go back.|    18|
+|negative|The cashier had n...|    99|
+|positive|I tried the Cape ...|    59|
+|negative|I was disgusted b...|    62|
+|negative|I was shocked bec...|    50|
+|positive| Highly recommended.|    19|
+|negative|Waitress was a li...|    38|
+|negative|This place is not...|    51|
+|negative|did not like at all.|    20|
++--------+--------------------+------+
+only showing top 20 rows
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orga271288" class="outline-3">
+<h3 id="orga271288"><span class="section-number-3">2.5.</span> Create Transformations</h3>
+<div class="outline-text-3" id="text-2-5">
+<p>
+We are going to create all the features to the dataset. These are all the procedures that we will run in our dataframe.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">pos_neg_to_num</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">StringIndexer</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'class'</span>,<span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'label'</span>)
+
+<span style="color: #9CDCFE;">tokenizer</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">Tokenizer</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"text"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"token_text"</span>)
+
+<span style="color: #9CDCFE;">stopremove</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">StopWordsRemover</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'token_text'</span>,<span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'stop_tokens'</span>)
+
+<span style="color: #9CDCFE;">hashingTF</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">HashingTF</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">"stop_tokens"</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'hash_token'</span>)
+
+<span style="color: #9CDCFE;">idf</span> <span style="color: #e0e0e0;">=</span> <span style="color: #e0e0e0;">IDF</span>(<span style="color: #9CDCFE;">inputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'hash_token'</span>, <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'idf_token'</span>)
+</pre>
+</div>
+
+<pre class="example" id="orgf3280f6">
+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org06d426d" class="outline-3">
+<h3 id="org06d426d"><span class="section-number-3">2.6.</span> Creating the Feature Vector</h3>
+<div class="outline-text-3" id="text-2-6">
+<p>
+Vector containing the output from the IDFModel. This will combine all the raw features to train the ML model that we will be using.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.feature </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">VectorAssembler</span>
+<span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.linalg </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">Vector</span>
+
+<span style="color: #9CDCFE;">clean_up</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">VectorAssembler</span>(
+    <span style="color: #9CDCFE;">inputCols</span><span style="color: #e0e0e0;">=</span>[<span style="color: #CE9178;">'idf_token'</span>, <span style="color: #CE9178;">'length'</span>],
+    <span style="color: #9CDCFE;">outputCol</span><span style="color: #e0e0e0;">=</span><span style="color: #CE9178;">'features'</span>
+)
+<span style="color: #C586C0;">print</span>(clean_up)
+</pre>
+</div>
+
+<pre class="example" id="org7a768d7">
+VectorAssembler_86d8a9460eb3
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org26b67fa" class="outline-3">
+<h3 id="org26b67fa"><span class="section-number-3">2.7.</span> Creating the Pipeline</h3>
+<div class="outline-text-3" id="text-2-7">
+<p>
+Now we combine all the steps via the <code>Pipeline</code> class from pyspark ml module.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">Pipeline</span>
+
+<span style="color: #9CDCFE;">data_prep_pipeline</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">Pipeline</span>(<span style="color: #9CDCFE;">stages</span><span style="color: #e0e0e0;">=</span>[
+        pos_neg_to_num,
+        tokenizer,
+        stopremove,
+        hashingTF,
+        idf,
+        clean_up
+])
+<span style="color: #C586C0;">print</span>(data_prep_pipeline)
+</pre>
+</div>
+
+<pre class="example" id="orgcb300ad">
+Pipeline_0e5518cfa9ea
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orga6d1d09" class="outline-3">
+<h3 id="orga6d1d09"><span class="section-number-3">2.8.</span> Run the Pipeline</h3>
+<div class="outline-text-3" id="text-2-8">
+<p>
+Now we fit and transform the pipeline.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">cleaner</span> <span style="color: #e0e0e0;">=</span> data_prep_pipeline.<span style="color: #ded492;">fit</span>(data_df)
+<span style="color: #9CDCFE;">cleaned</span> <span style="color: #e0e0e0;">=</span> cleaner.<span style="color: #ded492;">transform</span>(data_df)
+cleaned.<span style="color: #ded492;">select</span>([<span style="color: #CE9178;">'label'</span>, <span style="color: #CE9178;">'features'</span>]).<span style="color: #ded492;">show</span>(<span style="color: #BBCCAA;">5</span>)
+</pre>
+</div>
+
+<pre class="example" id="orge71d47d">
+22/10/20 14:21:15 WARN DAGScheduler: Broadcasting large task binary with size 4.1 MiB
++-----+--------------------+
+|label|            features|
++-----+--------------------+
+|  1.0|(262145,[177414,2...|
+|  0.0|(262145,[49815,23...|
+|  0.0|(262145,[109649,1...|
+|  1.0|(262145,[53101,68...|
+|  1.0|(262145,[15370,77...|
++-----+--------------------+
+only showing top 5 rows
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org7943a29" class="outline-3">
+<h3 id="org7943a29"><span class="section-number-3">2.9.</span> Train the Model</h3>
+<div class="outline-text-3" id="text-2-9">
+<p>
+We will split the data for training and testing so we can evaluate our model&rsquo;s performance after training.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">training</span>, <span style="color: #9CDCFE;">testing</span> <span style="color: #e0e0e0;">=</span> cleaned.<span style="color: #ded492;">randomSplit</span>([<span style="color: #BBCCAA;">0.7</span>, <span style="color: #BBCCAA;">0.3</span>], <span style="color: #BBCCAA;">21</span>)
+</pre>
+</div>
+
+<pre class="example" id="org6f4443d">
+
+</pre>
+
+<p>
+The ML model we&rsquo;ll use is Naive Bayes, which we&rsquo;ll import and then fit the model using the training dataset. Naive Bayes is a group of classifier algorithms based on Bayes&rsquo; theorem. Bayes theorem provides a way to determine the probability of an event based on new conditions or information that might be related to the event.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #569CD6;">from</span><span style="color: #4EC9B0;"> pyspark.ml.classification </span><span style="color: #569CD6;">import</span><span style="color: #4EC9B0;"> </span><span style="color: #4EC9B0;">NaiveBayes</span>
+<span style="color: #9CDCFE;">nb</span> <span style="color: #e0e0e0;">=</span> <span style="color: #4EC9B0;">NaiveBayes</span>()
+<span style="color: #9CDCFE;">predictor</span> <span style="color: #e0e0e0;">=</span> nb.<span style="color: #ded492;">fit</span>(training)
+</pre>
+</div>
+
+<p>
+We will look at the results now.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #9CDCFE;">test_results</span> <span style="color: #e0e0e0;">=</span> predictor.<span style="color: #ded492;">transform</span>(testing)
+test_results.<span style="color: #ded492;">show</span>(<span style="color: #BBCCAA;">5</span>)
+</pre>
+</div>
+
+<pre class="example" id="org3383bc5">
+22/10/20 14:29:55 WARN DAGScheduler: Broadcasting large task binary with size 23.0 MiB
+[Stage 73:&gt;                                      (0 + 1) / 1]                                                             +--------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+----------+
+|   class|                text|length|label|          token_text|         stop_tokens|          hash_token|           idf_token|            features|       rawPrediction|         probability|prediction|
++--------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+----------+
+|negative|"The burger... I ...|    86|  0.0|["the, burger...,...|["the, burger...,...|(262144,[20298,21...|(262144,[20298,21...|(262145,[20298,21...|[-820.60780566975...|[0.99999999999995...|       0.0|
+|negative|              #NAME?|     6|  0.0|            [#name?]|            [#name?]|(262144,[197050],...|(262144,[197050],...|(262145,[197050,2...|[-73.489435340867...|[0.07515735596910...|       1.0|
+|negative|After I pulled up...|    83|  0.0|[after, i, pulled...|[pulled, car, wai...|(262144,[65645,71...|(262144,[65645,71...|(262145,[65645,71...|[-620.40646705112...|[1.0,1.9205984091...|       0.0|
+|negative|Also, I feel like...|    58|  0.0|[also,, i, feel, ...|[also,, feel, lik...|(262144,[61899,66...|(262144,[61899,66...|(262145,[61899,66...|[-528.59562125515...|[0.99999999994873...|       0.0|
+|negative|Anyway, I do not ...|    44|  0.0|[anyway,, i, do, ...|[anyway,, think, ...|(262144,[132270,1...|(262144,[132270,1...|(262145,[132270,1...|[-334.09599709326...|[0.99999999994185...|       0.0|
++--------+--------------------+------+-----+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+----------+
+only showing top 5 rows
+</pre>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Alberto Valdez</p>
+<p class="date">Created: 2022-10-20 Thu 14:30</p>
+</div>
+</body>
+</html>
