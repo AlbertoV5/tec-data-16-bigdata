@@ -3,7 +3,94 @@
 #+author: Alberto Valdez
 #+SETUPFILE: ./config/org-theme-alt.config
 #+SETUPFILE: ./config/org-header.config
+#+PROPERTY: header-args:sql :engine postgresql :dbhost (getenv "AWS_DATAVIZ") :dbuser postgres :database amazon :results value html :post attr_wrap(data=*this*)
 
-* Template
+#+NAME: attr_wrap
+#+BEGIN_SRC python :var data="" :results silent :exports none
+import xml.etree.ElementTree as ET
 
-Template for taking notes with Emacs and org-mode.
+def build_row(parent, data, tag):
+    child = ET.SubElement(parent, "tr")
+    for s in data.split("\t"):
+        ET.SubElement(child, tag).text = s
+    return child
+# XML
+data = data.split("\n")
+table = ET.Element("table")
+build_row(table, data[0], "th")
+for row in data[1:-1]:
+    build_row(table, row, "td")
+ET.dump(table)
+#+END_SRC
+
+* Amazon Vine Reviews Analysis
+
+** Overview
+
+In this analysis we chose a dataset from Amazon's [[https://s3.amazonaws.com/amazon-reviews-pds/tsv/index.txt][Reviews]]. We picked the Musical Instruments dataset, followed the ETL procedures for processing the data with PySpark and made an analysis of the Vine Reviews table.
+
+** Results
+
+From all the tables that we managed to upload to our database, we used the Vine Reviews one to determine if there was bias on paid reviews over unpaid ones. We used the =star_rating=, =helpful_votes=, =total_votes= and =vine= columns for for our analysis.
+
+#+begin_src sql :wrap export html
+SELECT * FROM vine_table LIMIT 5;
+#+end_src
+
+#+RESULTS[f840d5747c5f812d697cc0647d3884fd0d8a0918]:
+#+begin_export html
+<table><tr><th>review_id</th><th>star_rating</th><th>helpful_votes</th><th>total_votes</th><th>vine</th><th>verified_purchase</th></tr><tr><td>RMDCHWD0Y5OZ9</td><td>3</td><td>0</td><td>1</td><td>N</td><td>N</td></tr><tr><td>RZSL0BALIYUNU</td><td>5</td><td>0</td><td>0</td><td>N</td><td>Y</td></tr><tr><td>RIZR67JKUDBI0</td><td>3</td><td>0</td><td>1</td><td>N</td><td>Y</td></tr><tr><td>R27HL570VNL85F</td><td>5</td><td>0</td><td>0</td><td>N</td><td>Y</td></tr><tr><td>R34EBU9QDWJ1GD</td><td>5</td><td>0</td><td>0</td><td>N</td><td>Y</td></tr></table>
+#+end_export
+
+We will use the following criteria for our analysis: we want to consider all reviews with more than 20 votes and than have a majority of helpful votes.
+
+#+begin_src sql :wrap export html
+SELECT vine, COUNT(review_id)
+FROM vine_table
+WHERE total_votes >= 20
+AND CAST(helpful_votes AS FLOAT)/CAST(total_votes AS FLOAT) >=0.5
+GROUP BY vine;
+#+end_src
+
+#+RESULTS[64aaa7861eb630d1de269d043270f3f0083f4bdf]:
+#+begin_export html
+<table><tr><th>vine</th><th>count</th></tr><tr><td>N</td><td>14477</td></tr><tr><td>Y</td><td>60</td></tr></table>
+#+end_export
+
+There are =14477= unpaid reviews and =60= paid reviews. Now we are going to take a look at the PySpark workflow for filtering the data and getting the percentages we want.
+
+#+attr_html: :width 500px
+[[./resources/percentages.png]]
+
+We can get the amount of 5-star reviews for both paid and unpaid reviews. We get a total of =34= Vine 5-star reviews and =8212= Non-Vine 5-star reviews, very different sample sizes.
+
+Finally, we can see that, even with the very large size difference on the samples, they have very similar 5-star to non-5-star reviews.
+
+#+begin_example
+------------------------------
+From the Most Helpful Reviews:
+------------------------------
+Total Count: 14537
+Total Count of 5-star Reviews: 8246
+------------------------------
+Total Count of Unpaid Reviews: 14477
+Total Count of Paid Reviews: 60
+Percentage of 5-star Unpaid Reviews: 56.72%
+Percentage of 5-star Paid Reviews: 56.67%
+#+end_example
+
+In conclusion:
+
+- There were =60= Vine reviews and =14477= Non-Vine reviews.
+- We got a total of =34= Vine 5-star reviews and =8212= Non-Vine 5-star reviews.
+- If we round to one decimal, the percentage of both types of reviews were =56.7%=.
+
+** Summary
+
+We have to consider that the more observations we have, the more the distribution will tend to a normal distribution, which looks to be consistent with the Non-Vine data. However, because such a small sample size for the Vine reviews while mantaining the same distribution, we are left with suspicion on the validity of these reviews. This is an indicator of positivity bias on the Vine program, as with such few reviews, it's unlikely that the distribution will be closer than to the larger dataset of non-Vine reviews.
+
+Additionally, we could perform a time series analysis as we count with DateTime data that we can use for binning and charting the data over time, specially on the non-Vine reviews. We can also use Natural Language Processing for getting a better understanding of the content of the Vine reviews and look for repeating patterns on the content of the review.
+
+** Closing Toughts
+
+We have managed to streamline a Extract, Transform, Load workflow using powerful tools and services. This proves that we can perform these kind of analysis with data that has high velocity, volume and variety in short amount of time and with little to no complexity. It only gets better from here!
